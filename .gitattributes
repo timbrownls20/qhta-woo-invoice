@@ -1,0 +1,13 @@
+# lib/ is Composer's output, committed on purpose: there is no build step and no
+# Composer on the web server, so the deploy zip is the working tree. See the
+# "Bundled libraries" section of the README.
+#
+# Marking it vendored and generated tells GitHub to leave it out of the
+# repository's language statistics, collapse it by default in pull requests, and
+# skip it in blame — so 689 files nobody here wrote stop drowning the ~1,500
+# lines that were.
+#
+# Deliberately NOT marked `-diff`: that would hide the contents of a dependency
+# bump, which is the one time somebody genuinely needs to read these files.
+lib/** linguist-vendored
+lib/** linguist-generated

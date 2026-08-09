@@ -1,0 +1,25 @@
+/*
+ * QHTA Woo Invoice — admin.
+ *
+ * WooCommerce renders the order-list Actions column as icon buttons: the label
+ * is pushed off-screen with a negative text-indent and the glyph comes from a
+ * ::after rule, one per action. An action with no glyph is a blank square.
+ *
+ * So this file supplies the two missing glyphs rather than fighting the layout.
+ * Reproducing the pattern WooCommerce uses for its own actions (`a.edit::after`,
+ * `a.complete::after`) means matching its specificity exactly and inheriting the
+ * font-family, sizing and positioning from its base rule — no !important, and
+ * nothing to re-tune when that base rule changes.
+ *
+ * These are Dashicons, which wp-admin always loads: \f190 is dashicons-pdf and
+ * \f463 is dashicons-update. The visible label survives as the button's title
+ * and aria-label, which wc_render_action_buttons() sets from the action name.
+ */
+
+.widefat .column-wc_actions a.button.qhta-invoice::after {
+	content: "\f190";
+}
+
+.widefat .column-wc_actions a.button.qhta-invoice-regenerate::after {
+	content: "\f463";
+}

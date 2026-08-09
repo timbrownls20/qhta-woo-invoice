@@ -1,0 +1,14 @@
+{
+	"name": "qhta/qhta-woo-invoice",
+	"description": "Build-time dependency manifest for the vendored libraries in lib/. Not used at runtime — the plugin loads lib/autoload.php directly and lib/ is committed.",
+	"license": "GPL-2.0-or-later",
+	"require": {
+		"php": ">=8.0",
+		"dompdf/dompdf": "^3.1",
+		"mustache/mustache": "^3.2"
+	},
+	"config": {
+		"vendor-dir": "lib",
+		"optimize-autoloader": true
+	}
+}

@@ -1,0 +1,75 @@
+<!--
+	Default QHTA tax invoice template.
+
+	Copy this file to wp-content/uploads/qhta-woo-invoice/invoice.html to edit it
+	— the override wins over this one and survives plugin updates. This file is
+	replaced on every update, so changes made here are lost.
+
+	Rendered with Mustache, then with Dompdf. Three things to know before editing:
+
+	  * An HTML comment is NOT a Mustache comment. Mustache parses the whole
+	    file, comments included, so a stray section tag written as an example in
+	    here is a real unclosed section and the render fails. That is why the
+	    placeholder names below are written bare. Use a Mustache comment if you
+	    need one.
+	  * A double-stache escapes, a triple-stache does not. buyer_address is the
+	    only value carrying markup — its lines are escaped by the plugin and
+	    joined with <br> — so it is the only triple in this file. Loop the
+	    buyer_address_lines section (each entry has a "line" key) instead if you
+	    would rather everything escaped.
+	  * Dompdf has no network access, so an image with an http src, or an
+	    external stylesheet, will not load. The logo arrives already embedded in
+	    logo_url as a data URI.
+
+	Values: seller_name, abn, invoice_heading, invoice_number, date,
+	payment_method, buyer_name, buyer_company, buyer_address, buyer_email,
+	subtotal, discount, tax, total, total_label, logo_url, gst_registered.
+	Sections: items (name, quantity, multiple, price), buyer_address_lines.
+-->
+<style>
+  body { font-family: DejaVu Sans, sans-serif; color:#222; font-size:12px; }
+  .logo { float:right; width:180px; }
+  h1 { font-size:18px; letter-spacing:1px; margin:0 0 4px; }
+  .seller { margin:0 0 24px; }
+  table.meta { width:100%; margin-bottom:24px; }
+  table.meta td { vertical-align:top; width:50%; }
+  table.meta p { margin:0 0 4px; }
+  table.items { width:100%; border-collapse:collapse; }
+  table.items th { background:#2b2b2b; color:#fff; text-align:left; padding:8px; }
+  table.items th.price, table.items td.price { text-align:right; }
+  table.items td { padding:8px; }
+  tr.sub td { background:#f2f2f2; }
+  tr.total td { background:#e6e6e6; font-weight:bold; }
+  td.label { text-align:right; }
+</style>
+
+{{#logo_url}}<img class="logo" src="{{logo_url}}" alt="{{seller_name}}">{{/logo_url}}
+<h1>{{invoice_heading}}</h1>
+<p class="seller"><strong>{{seller_name}}</strong><br>ABN: {{abn}}</p>
+
+<table class="meta">
+  <tr>
+    <td>
+      <p><strong>Invoice #:</strong> {{invoice_number}}</p>
+      <p><strong>Date:</strong> {{date}}</p>
+      <p><strong>Payment Method:</strong> {{payment_method}}</p>
+    </td>
+    <td>
+      {{#buyer_name}}{{buyer_name}}<br>{{/buyer_name}}
+      {{#buyer_company}}{{buyer_company}}<br>{{/buyer_company}}
+      {{#buyer_address}}{{{buyer_address}}}<br>{{/buyer_address}}
+      {{buyer_email}}
+    </td>
+  </tr>
+</table>
+
+<table class="items">
+  <thead><tr><th>Item</th><th class="price">Price</th></tr></thead>
+  <tbody>
+    {{#items}}<tr><td>{{name}}{{#multiple}} &times; {{quantity}}{{/multiple}}</td><td class="price">{{price}}</td></tr>{{/items}}
+    <tr class="sub"><td class="label">Subtotal</td><td class="price">{{subtotal}}</td></tr>
+    {{#discount}}<tr class="sub"><td class="label">Discount</td><td class="price">-{{discount}}</td></tr>{{/discount}}
+    {{#gst_registered}}<tr class="sub"><td class="label">Tax</td><td class="price">{{tax}}</td></tr>{{/gst_registered}}
+    <tr class="total"><td class="label">{{total_label}}</td><td class="price">{{total}}</td></tr>
+  </tbody>
+</table>
