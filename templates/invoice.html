@@ -23,7 +23,11 @@
 
 	Values: seller_name, abn, invoice_heading, invoice_number, date,
 	payment_method, buyer_name, buyer_company, buyer_address, buyer_email,
-	subtotal, discount, tax, total, total_label, logo_url, gst_registered.
+	subtotal, discount, tax, total, total_label, logo_url.
+	Flags to wrap rows in: has_tax (there is GST to show), gst_registered (the
+	seller is registered at all). The Tax row uses has_tax, so it disappears
+	rather than printing $0.00 — and total_label follows it, because "Total
+	including GST" over an order with no GST would be untrue.
 	Sections: items (name, quantity, multiple, price), buyer_address_lines.
 -->
 <style>
@@ -69,7 +73,7 @@
     {{#items}}<tr><td>{{name}}{{#multiple}} &times; {{quantity}}{{/multiple}}</td><td class="price">{{price}}</td></tr>{{/items}}
     <tr class="sub"><td class="label">Subtotal</td><td class="price">{{subtotal}}</td></tr>
     {{#discount}}<tr class="sub"><td class="label">Discount</td><td class="price">-{{discount}}</td></tr>{{/discount}}
-    {{#gst_registered}}<tr class="sub"><td class="label">Tax</td><td class="price">{{tax}}</td></tr>{{/gst_registered}}
+    {{#has_tax}}<tr class="sub"><td class="label">Tax</td><td class="price">{{tax}}</td></tr>{{/has_tax}}
     <tr class="total"><td class="label">{{total_label}}</td><td class="price">{{total}}</td></tr>
   </tbody>
 </table>

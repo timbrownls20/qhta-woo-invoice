@@ -276,17 +276,31 @@ function qhta_woo_invoice_data( $order ) {
 
 	$lines    = qhta_woo_invoice_address_lines( $order );
 	$discount = (float) $order->get_total_discount();
+	$tax      = (float) $order->get_total_tax();
+
+	// Is there GST worth printing? Rounded to the store's own price precision
+	// first, so the test asks the question the reader asks — "does that line say
+	// $0.00?" — rather than testing a float that can sit a fraction above zero
+	// and still print as nothing.
+	$decimals = function_exists( 'wc_get_price_decimals' ) ? wc_get_price_decimals() : 2;
+	$has_tax  = $gst && abs( round( $tax, $decimals ) ) > 0;
 
 	$data = array(
 		'seller_name'    => qhta_woo_invoice_seller_name(),
 		'abn'            => qhta_woo_invoice_abn(),
 
-		// Heading and total label follow the GST-registered switch so the escape
-		// hatch constant actually changes the document rather than being wired
-		// to nothing.
+		// The heading follows the GST-registered switch so the escape hatch
+		// constant actually changes the document rather than being wired to
+		// nothing. A registered seller still issues a TAX INVOICE for a GST-free
+		// sale, so the heading tracks registration and not the amount.
 		'invoice_heading' => $gst ? __( 'TAX INVOICE', 'qhta-woo-invoice' ) : __( 'INVOICE', 'qhta-woo-invoice' ),
 		'gst_registered'  => $gst,
-		'total_label'     => $gst ? __( 'Total including GST', 'qhta-woo-invoice' ) : __( 'Total', 'qhta-woo-invoice' ),
+
+		// The total label tracks the *amount*, not registration. "Total
+		// including GST" over an order carrying no GST is a false statement on a
+		// legal document, and it becomes an invisible one the moment the $0.00
+		// Tax row that used to contradict it is gone.
+		'total_label' => $has_tax ? __( 'Total including GST', 'qhta-woo-invoice' ) : __( 'Total', 'qhta-woo-invoice' ),
 
 		// The order number is the invoice number. Australia asks for an
 		// identifiable number, not a sequential one, and the order number is
@@ -316,7 +330,11 @@ function qhta_woo_invoice_data( $order ) {
 		// '' when there is no discount, which makes {{#discount}} falsy and the
 		// row disappear rather than printing "-$0.00".
 		'discount' => $discount > 0 ? qhta_woo_invoice_money( $discount, $order ) : '',
-		'tax'      => qhta_woo_invoice_money( $order->get_total_tax(), $order ),
+		// Kept populated even at zero, unlike discount, because a template may
+		// legitimately want to print "GST: $0.00" to show a sale was GST-free.
+		// `has_tax` is what the default template gates the row on.
+		'has_tax'  => $has_tax,
+		'tax'      => qhta_woo_invoice_money( $tax, $order ),
 		'total'    => qhta_woo_invoice_money( $order->get_total(), $order ),
 
 		'logo_url' => qhta_woo_invoice_logo_data_uri(),

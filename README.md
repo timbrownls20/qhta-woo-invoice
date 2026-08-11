@@ -78,10 +78,15 @@ correcting should be correctable in the same place, at the same moment, as the
 number under it.
 
 **GST registration.** QHTA is registered, so the document is headed `TAX
-INVOICE`, carries a Tax row, and totals as `Total including GST`. The constant
-exists so that if the answer ever changed the document would follow it — set it
-to `false` and the heading becomes `INVOICE`, the Tax row disappears, and the
-total reads `Total`. It does not change what WooCommerce charges.
+INVOICE` and carries a Tax row on any order with GST on it. The constant exists
+so that if the answer ever changed the document would follow it — set it to
+`false` and the heading becomes `INVOICE` and the Tax row never appears. It does
+not change what WooCommerce charges.
+
+Note that this is a different question from whether a *particular order* carries
+GST: the heading follows registration, while the Tax row and `{{total_label}}`
+follow the amount. A registered seller still issues a tax invoice for a GST-free
+sale — see [How the numbers add up](#how-the-numbers-add-up).
 
 **Logo.** `assets/logo.png` is bundled and embedded in the PDF as a data URI.
 `QHTA_INVOICE_LOGO` replaces it without touching the plugin, which is what makes
@@ -139,9 +144,10 @@ It is rendered with **Mustache**, so the line-item table can be a loop (a
 | `{{{buyer_address}}}` | Billing address lines joined with `<br>` — **triple-stache**, see below |
 | `{{buyer_email}}` | Billing email |
 | `{{subtotal}}` `{{discount}}` `{{tax}}` `{{total}}` | Formatted money, plain text |
-| `{{total_label}}` | `Total including GST`, or `Total` |
+| `{{total_label}}` | `Total including GST`, or `Total` when there is no GST |
 | `{{logo_url}}` | The logo as a base64 `data:` URI |
-| `{{gst_registered}}` | Section: wraps the Tax row |
+| `{{has_tax}}` | Flag: there is GST worth printing. Wraps the Tax row |
+| `{{gst_registered}}` | Flag: the seller is GST-registered at all |
 
 Sections: `{{#items}}` with `{{name}}`, `{{quantity}}`, `{{multiple}}` (truthy
 only above one) and `{{price}}`; and `{{#buyer_address_lines}}` with `{{line}}`.
@@ -178,6 +184,16 @@ invoice at all.
   not add up.
 - **Discount** appears as its own row only when there is one, so
   `Subtotal − Discount + Tax = Total` holds on the page.
+- **The Tax row disappears when there is no GST** rather than printing `$0.00`,
+  and `{{total_label}}` drops to plain `Total` with it. Those two move together
+  on purpose: "Total including GST" over an order carrying no GST is a false
+  statement on a legal document, and removing the `$0.00` line that used to
+  contradict it is what would make it invisible. The heading stays `TAX INVOICE`
+  — a registered seller still issues one for a GST-free sale.
+
+  "No GST" means the amount rounds to zero at the store's own price precision,
+  so the test matches what the reader would see. `{{tax}}` stays populated
+  either way, so a custom template can still print `GST: $0.00` deliberately.
 - **Subtotal, Tax and Total** come straight from `get_subtotal()`,
   `get_total_tax()` and `get_total()`.
 - Money is formatted with `wc_price()` in the **order's own** currency, not the
@@ -451,6 +467,12 @@ Confirm these before relying on the output.
   GST-registered says the association charges GST, not that these particular
   products are configured to. The invoice will faithfully print whatever the
   order produces.
+
+  **This got quieter, and that is worth knowing.** A `$0.00` Tax row used to be
+  a visible symptom of a misconfigured tax class. Now the row is simply absent,
+  so a wrongly GST-free product produces an invoice that looks deliberate rather
+  than broken. Check one real order's totals against WooCommerce → Tax before
+  the first invoice goes out; nothing on the document will tell you.
 - **The logo file.** `assets/logo.png` was taken from the conference plugin's
   sponsor images — it is the right logo, at 200×155, which is on the small side
   for print. If a higher-resolution original exists, upload it and point

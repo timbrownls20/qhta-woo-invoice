@@ -61,6 +61,28 @@ with `WC_Order` as the subject instead of `MemberOrder`.
   real absolute path until you look on disk. Anything unresolvable is logged and
   ignored, leaving the bundled logo: an invoice with the old logo is a small
   problem, one with no logo is a reissue.
+- **The Tax row is omitted when there is no GST**, rather than printing a
+  `$0.00` line that says nothing. "No GST" means the amount rounds to zero at the
+  store's own price precision, so the test asks the question the reader asks —
+  "does that line say $0.00?" — instead of testing a float that can sit a
+  fraction above zero and still print as nothing.
+
+  **`{{total_label}}` moves with it**, dropping to plain `Total`. The two are not
+  separable: "Total including GST" over an order carrying no GST is a false
+  statement on a legal document, and the `$0.00` row was the only thing on the
+  page contradicting it. Removing the row alone would have made a wrong claim
+  invisible instead of merely inconsistent.
+
+  The **heading stays `TAX INVOICE`**, because that follows registration, not the
+  amount — a registered seller still issues a tax invoice for a GST-free sale.
+  `{{tax}}` also stays populated at zero, unlike `{{discount}}`, so a custom
+  template can still print `GST: $0.00` deliberately; the new `{{has_tax}}` flag
+  is what the default template gates the row on.
+
+  One consequence to know: a `$0.00` Tax row used to be a visible symptom of a
+  misconfigured tax class, and now there is no symptom. Checking the recordings'
+  tax class in WooCommerce → Settings → Tax moved from "worth doing" to "the only
+  way you will find out".
 - **`QHTA_INVOICE_GST_REGISTERED`** as an escape hatch, wired up rather than
   merely accepted. QHTA is registered and this stays true; if it ever changed,
   the heading, the Tax row and the total label all follow it. A constant that
