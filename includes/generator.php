@@ -296,11 +296,12 @@ function qhta_woo_invoice_data( $order ) {
 		'invoice_heading' => $gst ? __( 'TAX INVOICE', 'qhta-woo-invoice' ) : __( 'INVOICE', 'qhta-woo-invoice' ),
 		'gst_registered'  => $gst,
 
-		// The total label tracks the *amount*, not registration. "Total
-		// including GST" over an order carrying no GST is a false statement on a
-		// legal document, and it becomes an invisible one the moment the $0.00
-		// Tax row that used to contradict it is gone.
-		'total_label' => $has_tax ? __( 'Total including GST', 'qhta-woo-invoice' ) : __( 'Total', 'qhta-woo-invoice' ),
+		// The total label tracks registration, like the heading — QHTA's prices
+		// are GST-inclusive, so a registered seller's total is an including-GST
+		// total whether or not WooCommerce broke the component out onto its own
+		// line. It says plain "Total" only when the seller is not registered,
+		// where "including GST" would be false rather than merely unitemised.
+		'total_label' => $gst ? __( 'Total including GST', 'qhta-woo-invoice' ) : __( 'Total', 'qhta-woo-invoice' ),
 
 		// The order number is the invoice number. Australia asks for an
 		// identifiable number, not a sequential one, and the order number is

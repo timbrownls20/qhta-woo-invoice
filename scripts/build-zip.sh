@@ -87,6 +87,7 @@ zip -rq "$staging_zip" "$PLUGIN_SLUG" \
 	   "*.git*" \
 	   "*.claude*" \
 	   "*.zip" \
+	   "qhta-woo-invoice/HEALTHCHECK.md" \
 	   "$PLUGIN_SLUG/scripts/*" \
 	   "$PLUGIN_SLUG/composer.json" \
 	   "$PLUGIN_SLUG/composer.lock" \

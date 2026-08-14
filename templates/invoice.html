@@ -26,8 +26,9 @@
 	subtotal, discount, tax, total, total_label, logo_url.
 	Flags to wrap rows in: has_tax (there is GST to show), gst_registered (the
 	seller is registered at all). The Tax row uses has_tax, so it disappears
-	rather than printing $0.00 — and total_label follows it, because "Total
-	including GST" over an order with no GST would be untrue.
+	rather than printing $0.00. total_label follows gst_registered instead, not
+	has_tax: prices here are GST-inclusive, so the total includes GST even on an
+	order where WooCommerce itemised none.
 	Sections: items (name, quantity, multiple, price), buyer_address_lines.
 -->
 <style>

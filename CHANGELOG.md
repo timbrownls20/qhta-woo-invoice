@@ -1,5 +1,130 @@
 # Changelog
 
+## 1.2.0 — 12 August 2026
+
+### Added
+- **Healthcheck canaries**, in `includes/healthcheck.php` — ten checks registered on
+  `qhta-healthcheck`'s `qhta_healthcheck_checks` filter: `WC_Order`, the bundled Dompdf and Mustache
+  classes, the invoice template (resolved through `qhta_woo_invoice_template()`, so it reports which
+  of override or default is actually in use), the invoice directory's existence/`.htaccess`/
+  `index.php`/writability, the email-attachment filter, the completed-order generation hook, both
+  download handlers, the HPOS declaration, the two order-list buttons, and an end-to-end check that
+  recent completed orders actually carry an invoice.
+
+  That last one reads through `wc_get_orders()` rather than `wp_postmeta`, so it is correct under
+  HPOS — asking postmeta would return zero on a perfectly healthy store, which is exactly the false
+  alarm that teaches people to ignore a monitoring screen.
+
+  This plugin fails soft everywhere by design, because it runs on the customer email path and a fatal
+  there loses the order confirmation rather than just the invoice. That design is why it needs
+  watching from outside, and why these canaries ship with it.
+
+### Changed
+- **The total line now reads "Total including GST" on every invoice**, not only on orders where
+  WooCommerce itemised a GST amount. `total_label` follows the GST-registered switch again — the same
+  one the heading uses — rather than following `has_tax`.
+
+  1.1.0 tied it to the amount on the reasoning that "Total including GST" over an order carrying no
+  GST is a false statement. That reasoning assumed a zero Tax row meant a GST-free sale. On this
+  store it does not: prices are GST-inclusive, so the total genuinely includes GST even when the
+  order's tax lines don't break it out, and the old rule was hiding a true statement rather than
+  suppressing a false one. With the `$0.00` Tax row removed in 1.1.0, the label is now the only place
+  on the page that says GST is in the number at all.
+
+  Plain `Total` remains for `QHTA_INVOICE_GST_REGISTERED = false`, which is the case where the claim
+  would actually be untrue. `has_tax` is unchanged and still gates the Tax row.
+- The canary registration is loaded at **file scope, deliberately outside `qhta_woo_invoice_bootstrap()`**.
+  The feature files only load when WooCommerce is present; the canaries must not. "WooCommerce is
+  missing" is the single most important thing this plugin has to report, and registering inside the
+  WooCommerce guard would mean that in exactly that case no canaries exist and the board shows "no
+  canaries defined" instead of a red line naming the cause. The three checks that need the feature
+  files skip themselves when those are absent.
+
+## 1.1.0 — 11 August 2026
+
+Configuration that was hardcoded in 1.0.0, and one change to what the document
+says when an order carries no GST.
+
+Both constants exist for the same reason the ABN one does: these values print on
+a legal document, and correcting one should not require a plugin release.
+
+### Added
+- **`QHTA_INVOICE_SELLER`** in `wp-config.php`, defaulting to `QHTA`. It sits
+  beside the ABN because the two lines together are the seller's identity on a
+  tax invoice: a trading name that needs correcting should be correctable in the
+  same place, at the same moment, as the number under it. A blank or
+  whitespace-only value falls back to the default rather than printing an
+  invoice with no seller on it.
+- **`QHTA_INVOICE_LOGO`** in `wp-config.php`, replacing the bundled
+  `assets/logo.png`. The original brief called the logo not configurable, and
+  that was right about its *shape* — it is an asset, not a setting. What earns
+  it a constant is the replacement case: the bundled file is a 200px
+  sponsor-sheet copy, and swapping it for a print-resolution original should be
+  an upload, not a plugin release.
+
+  It accepts all three things somebody will realistically paste in, because only
+  one is the "correct" form and the other two are what the Media Library hands
+  you: an uploads-relative path, an absolute server path, and a full uploads
+  URL. A URL under this site is **mapped back to the file on disk rather than
+  fetched** — the PDF engine has no network access by design, so a URL left as a
+  URL would silently produce an invoice with no logo — and a URL on another host
+  is refused for the same reason. A leading slash is tried as an absolute path
+  and then as an uploads path, because `/branding/logo.png` is what you write
+  when you mean the top of the uploads folder and it is indistinguishable from a
+  real absolute path until you look on disk. Anything unresolvable is logged and
+  ignored, leaving the bundled logo: an invoice with the old logo is a small
+  problem, one with no logo is a reissue.
+- **Every constant is ignored when it is unusable**, with a line in the log, and
+  the built-in value stays. Now applied uniformly across the ABN, the seller name
+  and the logo: a misconfigured constant should make the invoice look stale,
+  never make it invalid. The filters still run *after* the constants, so code
+  keeps the last word over configuration.
+- `{{has_tax}}` in the template context, and `qhta_woo_invoice_resolve_logo()`
+  for the path/URL handling behind `QHTA_INVOICE_LOGO`.
+
+### Changed
+- **The Tax row is omitted when there is no GST**, rather than printing a
+  `$0.00` line that says nothing. "No GST" means the amount rounds to zero at the
+  store's own price precision, so the test asks the question the reader asks —
+  "does that line say $0.00?" — instead of testing a float that can sit a
+  fraction above zero and still print as nothing.
+
+  **`{{total_label}}` moves with it**, dropping to plain `Total`. The two are not
+  separable: "Total including GST" over an order carrying no GST is a false
+  statement on a legal document, and the `$0.00` row was the only thing on the
+  page contradicting it. Removing the row alone would have made a wrong claim
+  invisible instead of merely inconsistent.
+
+  The **heading stays `TAX INVOICE`**, because that follows registration, not the
+  amount — a registered seller still issues a tax invoice for a GST-free sale.
+  `{{tax}}` also stays populated at zero, unlike `{{discount}}`, so a custom
+  template can still print `GST: $0.00` deliberately; the new `{{has_tax}}` flag
+  is what the default template gates the row on.
+
+  One consequence to know: a `$0.00` Tax row used to be a visible symptom of a
+  misconfigured tax class, and now there is no symptom. Checking the recordings'
+  tax class in WooCommerce → Settings → Tax moved from "worth doing" to "the only
+  way you will find out".
+
+### Notes
+- **The ABN was verified between these two releases.** Checked against the ABR
+  register on 9 August 2026: `77 270 249 802` is QLD HISTORY TEACHERS ASSOC INC,
+  active since 1 Nov 1999 and GST-registered since 1 Jul 2000. That independently
+  confirms the fixed `true` behind `QHTA_INVOICE_GST_REGISTERED`.
+
+  It also raised the open question `QHTA_INVOICE_SELLER` now answers: the
+  registered entity name is "QLD History Teachers Assoc Inc" while the invoice
+  prints "QHTA". Both an identity and an ABN are required and both are present,
+  so the abbreviation is defensible — but the constant is there if the registered
+  name is wanted.
+- **`.gitattributes` marks `lib/` vendored and generated**, so GitHub keeps 689
+  files nobody here wrote out of the language statistics, collapses them in pull
+  requests and skips them in blame. Deliberately not `-diff`: a dependency bump
+  is the one time somebody needs to read them.
+- Nothing in the storage, delivery, access or admin paths changed. An invoice
+  generated by 1.0.0 stays valid and is not reissued; the new behaviour applies
+  the next time one is generated or regenerated.
+
 ## 1.0.0 — 9 August 2026
 
 Initial release. PDF tax invoices for WooCommerce orders on qhta.com.au, built
@@ -36,53 +161,6 @@ with `WC_Order` as the subject instead of `MemberOrder`.
   on the server, immediately, without a release. The fallback is a real value
   rather than a blank, because an invoice with an empty ABN line is a broken tax
   invoice while a wrong-looking one is at least visible.
-- **`QHTA_INVOICE_SELLER`** in `wp-config.php`, defaulting to `QHTA`. It sits
-  beside the ABN because the two lines together are the seller's identity on a
-  tax invoice: a trading name that needs correcting should be correctable in the
-  same place, at the same moment, as the number under it. A blank or
-  whitespace-only value falls back to the default rather than printing an
-  invoice with no seller on it.
-- **`QHTA_INVOICE_LOGO`** in `wp-config.php`, replacing the bundled
-  `assets/logo.png`. The original brief called the logo not configurable, and
-  that was right about its *shape* — it is an asset, not a setting. What earns
-  it a constant is the replacement case: the bundled file is a 200px
-  sponsor-sheet copy, and swapping it for a print-resolution original should be
-  an upload, not a plugin release.
-
-  It accepts all three things somebody will realistically paste in, because only
-  one is the "correct" form and the other two are what the Media Library hands
-  you: an uploads-relative path, an absolute server path, and a full uploads
-  URL. A URL under this site is **mapped back to the file on disk rather than
-  fetched** — the PDF engine has no network access by design, so a URL left as a
-  URL would silently produce an invoice with no logo — and a URL on another host
-  is refused for the same reason. A leading slash is tried as an absolute path
-  and then as an uploads path, because `/branding/logo.png` is what you write
-  when you mean the top of the uploads folder and it is indistinguishable from a
-  real absolute path until you look on disk. Anything unresolvable is logged and
-  ignored, leaving the bundled logo: an invoice with the old logo is a small
-  problem, one with no logo is a reissue.
-- **The Tax row is omitted when there is no GST**, rather than printing a
-  `$0.00` line that says nothing. "No GST" means the amount rounds to zero at the
-  store's own price precision, so the test asks the question the reader asks —
-  "does that line say $0.00?" — instead of testing a float that can sit a
-  fraction above zero and still print as nothing.
-
-  **`{{total_label}}` moves with it**, dropping to plain `Total`. The two are not
-  separable: "Total including GST" over an order carrying no GST is a false
-  statement on a legal document, and the `$0.00` row was the only thing on the
-  page contradicting it. Removing the row alone would have made a wrong claim
-  invisible instead of merely inconsistent.
-
-  The **heading stays `TAX INVOICE`**, because that follows registration, not the
-  amount — a registered seller still issues a tax invoice for a GST-free sale.
-  `{{tax}}` also stays populated at zero, unlike `{{discount}}`, so a custom
-  template can still print `GST: $0.00` deliberately; the new `{{has_tax}}` flag
-  is what the default template gates the row on.
-
-  One consequence to know: a `$0.00` Tax row used to be a visible symptom of a
-  misconfigured tax class, and now there is no symptom. Checking the recordings'
-  tax class in WooCommerce → Settings → Tax moved from "worth doing" to "the only
-  way you will find out".
 - **`QHTA_INVOICE_GST_REGISTERED`** as an escape hatch, wired up rather than
   merely accepted. QHTA is registered and this stays true; if it ever changed,
   the heading, the Tax row and the total label all follow it. A constant that
@@ -111,11 +189,6 @@ with `WC_Order` as the subject instead of `MemberOrder`.
   write goes through the `WC_Order` CRUD, never post meta.
 - **Mustache and Dompdf vendored** into `lib/`, no build step, no Composer on
   the server, no dependency on another plugin's renderer.
-- **Every constant is ignored when it is unusable**, with a line in the log, and
-  the built-in value stays. Applied uniformly to the ABN, the seller name and
-  the logo: a misconfigured constant should make the invoice look stale, never
-  make it invalid. The filters all run *after* the constants, so code keeps the
-  last word over configuration.
 - **Twelve filters and one action**, so the ABN, seller name, template, logo,
   date format, context, HTML, PDF options, access rule, invoiceability and email
   scope can all move without editing the plugin.
@@ -221,24 +294,12 @@ with `WC_Order` as the subject instead of `MemberOrder`.
   `wc_render_action_buttons()` sets from the action name.
 - **The logo is `assets/logo.png`, taken from the conference plugin's sponsor
   images.** It is the right logo at 200×155, which is small for print. Replacing
-  it no longer needs a release — upload a better one and point
-  `QHTA_INVOICE_LOGO` at it. Still listed as an open item because nobody has.
-- **The ABN was verified, not just recorded.** Checked against the ABR register
-  on 9 August 2026: `77 270 249 802` is QLD HISTORY TEACHERS ASSOC INC, active
-  since 1 Nov 1999 and GST-registered since 1 Jul 2000. That settles the default
-  value *and* independently confirms the fixed `true` behind
-  `QHTA_INVOICE_GST_REGISTERED` — the heading, the Tax row and "Total including
-  GST" are correct because the association really is registered.
-
-  It does **not** settle the recordings' tax class in WooCommerce → Settings →
-  Tax, which is the remaining open item: being GST-registered says the
-  association charges GST, not that these particular products are configured to.
-
-  The registered entity name is "QLD History Teachers Assoc Inc" while the
-  invoice prints "QHTA". Both an identity and an ABN are required and both are
-  present, so the abbreviation is defensible — but `QHTA_INVOICE_SELLER` exists
-  now if the registered name is wanted, and someone who knows how QHTA presents
-  itself should decide.
+  it means editing the file and cutting a release. (1.1.0 removes that
+  constraint.)
+- **Two things must be confirmed before this is trusted**, neither fixable in
+  code: the ABN in `QHTA_INVOICE_ABN` is correct, and the recordings' tax class
+  in WooCommerce → Settings → Tax produces the intended GST treatment. (The ABN
+  was checked shortly after this release — see 1.1.0.)
 - **Credit notes on refund are deliberately not in 1.0.** Refunds already revoke
   access through `qhta-commerce`'s gate, so omitting them leaves nothing
   dangling.

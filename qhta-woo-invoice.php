@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       QHTA Woo Invoice
  * Description:       PDF tax invoices for WooCommerce orders on qhta.com.au — an editable HTML template rendered to PDF, attached to the completed-order email, and downloadable from My Account and the admin order screen. Renders the order's own totals; it does not calculate GST.
- * Version:           1.0.0
+ * Version:           1.2.0
  * Author:            QHTA
  * License:           GPL-2.0-or-later
  * Requires at least: 6.0
@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'QHTA_WOO_INVOICE_VERSION', '1.0.0' );
+define( 'QHTA_WOO_INVOICE_VERSION', '1.2.0' );
 define( 'QHTA_WOO_INVOICE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'QHTA_WOO_INVOICE_URL', plugin_dir_url( __FILE__ ) );
 define( 'QHTA_WOO_INVOICE_FILE', __FILE__ );
@@ -313,6 +313,18 @@ function qhta_woo_invoice_bootstrap() {
 	}
 }
 add_action( 'plugins_loaded', 'qhta_woo_invoice_bootstrap' );
+
+/*
+ * Healthcheck canaries — deliberately OUTSIDE the bootstrap above.
+ *
+ * The feature files only load when WooCommerce is present. The canaries must
+ * not: "WooCommerce is missing" is the single most important thing this plugin
+ * has to report, and registering the canaries inside the WooCommerce guard
+ * would mean that in exactly that case none of them exist and the board shows
+ * "no canaries defined" instead of a red line naming the cause. The individual
+ * checks that need the feature files skip themselves when those are not loaded.
+ */
+require_once QHTA_WOO_INVOICE_PATH . 'includes/healthcheck.php';
 
 /**
  * Say so when WooCommerce is missing.
