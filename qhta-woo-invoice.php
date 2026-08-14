@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       QHTA Woo Invoice
  * Description:       PDF tax invoices for WooCommerce orders on qhta.com.au — an editable HTML template rendered to PDF, attached to the completed-order email, and downloadable from My Account and the admin order screen. Renders the order's own totals; it does not calculate GST.
- * Version:           1.2.0
+ * Version:           1.2.1
  * Author:            QHTA
  * License:           GPL-2.0-or-later
  * Requires at least: 6.0
@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'QHTA_WOO_INVOICE_VERSION', '1.2.0' );
+define( 'QHTA_WOO_INVOICE_VERSION', '1.2.1' );
 define( 'QHTA_WOO_INVOICE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'QHTA_WOO_INVOICE_URL', plugin_dir_url( __FILE__ ) );
 define( 'QHTA_WOO_INVOICE_FILE', __FILE__ );

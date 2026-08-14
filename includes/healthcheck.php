@@ -43,6 +43,18 @@ function qhta_woo_invoice_healthcheck_checks( $checks ) {
 				'why'      => __( 'The bundled libraries render the PDF. A deploy that misses lib/ leaves invoicing broken in a way only the error log records — the customer email still sends, just without an attachment.', 'qhta-woo-invoice' ),
 				'severity' => 'critical',
 				'test'     => function () {
+					if ( ! function_exists( 'qhta_woo_invoice_load_libraries' ) ) {
+						return qhta_healthcheck_skip( __( 'WooCommerce is not active, so the invoice files are not loaded.', 'qhta-woo-invoice' ) );
+					}
+
+					// The autoloader is registered lazily, at generation time —
+					// so on an ordinary admin page load neither class is
+					// autoloadable and asserting on them alone fails on a
+					// perfectly healthy site. Load first, then assert: that is
+					// also the honest test of the thing this canary is for,
+					// because the loader is what notices a deploy without lib/.
+					qhta_woo_invoice_load_libraries();
+
 					return qhta_healthcheck_assert_classes( array( 'Mustache\\Engine', 'Dompdf\\Dompdf' ) );
 				},
 			),
@@ -57,14 +69,16 @@ function qhta_woo_invoice_healthcheck_checks( $checks ) {
 					// which the order-API canary above is already reporting in
 					// red. Skip rather than throw a second, less informative
 					// alarm about the same root cause.
-					if ( ! function_exists( 'qhta_woo_invoice_template' ) ) {
+					if ( ! function_exists( 'qhta_woo_invoice_template_path' ) ) {
 						return qhta_healthcheck_skip( __( 'WooCommerce is not active, so the invoice files are not loaded.', 'qhta-woo-invoice' ) );
 					}
 
 					// Resolved through the plugin's own lookup, so the filter and
 					// the override precedence cannot drift from what the canary
-					// believes.
-					$path = qhta_woo_invoice_template();
+					// believes. The *path* resolver, not qhta_woo_invoice_template()
+					// — that one returns the file's contents, and handing those to
+					// a file check reports the whole template as a missing filename.
+					$path = qhta_woo_invoice_template_path();
 
 					if ( '' === (string) $path ) {
 						return qhta_healthcheck_fail( __( 'No readable invoice template — neither the uploads override nor the plugin default resolved.', 'qhta-woo-invoice' ) );

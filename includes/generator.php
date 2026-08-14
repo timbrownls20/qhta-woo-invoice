@@ -65,16 +65,21 @@ function qhta_woo_invoice_load_libraries() {
 }
 
 /**
- * The invoice template, as a Mustache string.
+ * Which file the invoice is rendered from.
  *
  * Override first, default second. The override lives in the uploads directory
  * so template edits survive a plugin update — the same arrangement as the PMPro
  * invoice template, and the reason the site owner can restyle an invoice
  * without a release.
  *
- * @return string Template source, or '' when neither file is readable.
+ * Separate from qhta_woo_invoice_template() because the healthcheck canary needs
+ * the *path* — to report which of the two is in use, and to check it is readable
+ * — while rendering needs the source. One resolver, so the canary cannot drift
+ * from what the renderer actually opens.
+ *
+ * @return string Absolute path to the template, or '' when neither file is readable.
  */
-function qhta_woo_invoice_template() {
+function qhta_woo_invoice_template_path() {
 	$override = qhta_woo_invoice_dir() . 'invoice.html';
 	$default  = QHTA_WOO_INVOICE_PATH . 'templates/invoice.html';
 
@@ -91,6 +96,21 @@ function qhta_woo_invoice_template() {
 
 	if ( ! file_exists( $path ) || ! is_readable( $path ) ) {
 		qhta_woo_invoice_log( 'Invoice template not readable: ' . $path );
+		return '';
+	}
+
+	return $path;
+}
+
+/**
+ * The invoice template, as a Mustache string.
+ *
+ * @return string Template source, or '' when neither file is readable.
+ */
+function qhta_woo_invoice_template() {
+	$path = qhta_woo_invoice_template_path();
+
+	if ( '' === $path ) {
 		return '';
 	}
 

@@ -1,5 +1,45 @@
 # Changelog
 
+## 1.2.1 — 15 August 2026
+
+### Changed
+- **The total line now reads "Total including GST" on every invoice**, not only on orders where
+  WooCommerce itemised a GST amount. `total_label` follows the GST-registered switch again — the same
+  one the heading uses — rather than following `has_tax`.
+
+  1.1.0 tied it to the amount on the reasoning that "Total including GST" over an order carrying no
+  GST is a false statement. That reasoning assumed a zero tax figure meant a GST-free sale. On this
+  store it does not: prices are GST-inclusive, so the total genuinely includes GST even when the
+  order's tax lines don't break it out, and the old rule was hiding a true statement rather than
+  suppressing a false one. With the `$0.00` Tax row removed in 1.1.0, the label is now the only place
+  on the page that says GST is in the number at all.
+
+  Plain `Total` remains for `QHTA_INVOICE_GST_REGISTERED = false`, which is the case where the claim
+  would actually be untrue. `has_tax` is unchanged and still gates the Tax row.
+
+  **Existing PDFs do not change.** They are rendered once and kept on disk, so an invoice issued
+  before this release keeps the old wording until it is re-issued from Memberships → Orders →
+  Regenerate.
+
+### Fixed
+- **Two canaries shipped in 1.2.0 were red on a healthy site.** Both were faults in the checks, not
+  in what they were checking — invoicing was working the whole time.
+
+  - **"Invoice template readable"** called `qhta_woo_invoice_template()`, which returns the template's
+    *source*, and handed it to a file check — so the canary reported the entire template as a missing
+    filename. The resolution is now split: `qhta_woo_invoice_template_path()` returns the path and is
+    what the canary asks, `qhta_woo_invoice_template()` reads that path. One resolver still, so the
+    canary cannot drift from what the renderer opens.
+  - **"Dompdf and Mustache loadable"** asserted the two classes exist, but the bundled autoloader is
+    registered lazily at generation time — so on an ordinary admin page load nothing had registered
+    it and the classes were correctly unloadable. It calls `qhta_woo_invoice_load_libraries()` first
+    now, which is also the more honest test: that loader is the thing that notices a deploy without
+    `lib/`, which is what the canary exists to catch.
+
+  A check that fails during ordinary operation is not a check — same reasoning as the output-directory
+  canary removed from qhta-pmpro-invoice-extensions in 1.2.3. These two were worth fixing rather than
+  removing, because both do fail for real reasons too.
+
 ## 1.2.0 — 12 August 2026
 
 ### Added
@@ -20,19 +60,6 @@
   watching from outside, and why these canaries ship with it.
 
 ### Changed
-- **The total line now reads "Total including GST" on every invoice**, not only on orders where
-  WooCommerce itemised a GST amount. `total_label` follows the GST-registered switch again — the same
-  one the heading uses — rather than following `has_tax`.
-
-  1.1.0 tied it to the amount on the reasoning that "Total including GST" over an order carrying no
-  GST is a false statement. That reasoning assumed a zero Tax row meant a GST-free sale. On this
-  store it does not: prices are GST-inclusive, so the total genuinely includes GST even when the
-  order's tax lines don't break it out, and the old rule was hiding a true statement rather than
-  suppressing a false one. With the `$0.00` Tax row removed in 1.1.0, the label is now the only place
-  on the page that says GST is in the number at all.
-
-  Plain `Total` remains for `QHTA_INVOICE_GST_REGISTERED = false`, which is the case where the claim
-  would actually be untrue. `has_tax` is unchanged and still gates the Tax row.
 - The canary registration is loaded at **file scope, deliberately outside `qhta_woo_invoice_bootstrap()`**.
   The feature files only load when WooCommerce is present; the canaries must not. "WooCommerce is
   missing" is the single most important thing this plugin has to report, and registering inside the

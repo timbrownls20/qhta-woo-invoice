@@ -26,8 +26,8 @@ A new dependency with no canary is the silent-failure risk qhta-healthcheck exis
 | Canary | Sev | Watches |
 |---|---|---|
 | WooCommerce order API | critical | `WC_Order` |
-| Dompdf and Mustache loadable | critical | the bundled `lib/` actually deployed |
-| Invoice template readable | critical | resolved via `qhta_woo_invoice_template()`; reports which copy is in use |
+| Dompdf and Mustache loadable | critical | the bundled `lib/` actually deployed — calls `qhta_woo_invoice_load_libraries()` first, because the autoloader is lazy and the classes are not loadable before it |
+| Invoice template readable | critical | resolved via `qhta_woo_invoice_template_path()` — the *path* resolver, not `qhta_woo_invoice_template()`, which returns the source; reports which copy is in use |
 | Invoice directory exists and is protected | critical | directory + `.htaccess` + `index.php` + writable |
 | `woocommerce_email_attachments` | critical | the only path by which a customer gets an invoice unprompted |
 | Generate on order completion | critical | `woocommerce_order_status_completed` priority 5 |
